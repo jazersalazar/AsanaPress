@@ -178,11 +178,12 @@ function asanawp_section() {
 	global $client;
 
 	$asanawp_project = get_option( 'asanawp_project' );
+	$asanawp_section = get_option( 'asanawp_section' );
 	$sections = $client->sections->getSectionsForProject( $asanawp_project, array('opt_expand' => 'memberships'));
 
 	echo '<select id="asanawp_section" name="asanawp_section">';
 	foreach ($sections as $section) {
-		echo '<option value="' . $section->gid . '" ' . ( $asanawp_task !== $section->gid ?: 'selected' ) . '>' . $section->name . '</option>';
+		echo '<option value="' . $section->gid . '" ' . ( $asanawp_section !== $section->gid ?: 'selected' ) . '>' . $section->name . '</option>';
 	}	
 	echo '</select>';
 
