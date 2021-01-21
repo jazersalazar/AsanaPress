@@ -347,50 +347,54 @@ function asanawp_nofitication(  $notification, $form, $entry ) {
     // if ( $notification['name'] == 'Admin Notification' ) {
 
     global $client;
+    
+    $asanawp_pat = get_option( 'asanawp_pat' );
+    $client = Asana\Client::accessToken( $asanawp_pat );
 
-    $asanawp_workspace = get_option( 'asanawp_workspace' );
-    $asanawp_project = get_option( 'asanawp_project' );
-    $asanawp_section = get_option( 'asanawp_section' );
-    $asanawp_custom_fields = get_option( 'asanawp_custom_fields' );
+    if ( $client ) {
+        $asanawp_workspace = get_option( 'asanawp_workspace' );
+        $asanawp_project = get_option( 'asanawp_project' );
+        $asanawp_section = get_option( 'asanawp_section' );
+        $asanawp_custom_fields = get_option( 'asanawp_custom_fields' );
 
-    // Interpolate subject with entry fields
-    $name = $notification['subject'];
-    preg_match_all( '/{[^{]*?:(\d+(\.\d+)?)(:(.*?))?}/mi', $name, $matches, PREG_SET_ORDER );
-    if ( is_array( $matches ) ) {
-        foreach ( $matches as $match ) {
-            $name = str_replace( $match[0], $entry[ $match[1] ], $name );
+        // Interpolate subject with entry fields
+        $name = $notification['subject'];
+        preg_match_all( '/{[^{]*?:(\d+(\.\d+)?)(:(.*?))?}/mi', $name, $matches, PREG_SET_ORDER );
+        if ( is_array( $matches ) ) {
+            foreach ( $matches as $match ) {
+                $name = str_replace( $match[0], $entry[ $match[1] ], $name );
+            }
         }
-    }
 
-    $notes = 'This task is automatically created via form submission, full details below:\r\n';
-    foreach ( $form['fields'] as $field ) {
-        if ( $field['label'] && $asanawp_custom_fields[$field['id']]['value'] == 'false') {
-            $notes .= $field['label'] . ': ' . $entry[$field['id']] . "\r\n";
+        $notes = 'This task is automatically created via form submission, full details below:\r\n';
+        foreach ( $form['fields'] as $field ) {
+            if ( $field['label'] && $asanawp_custom_fields[$field['id']]['value'] == 'false') {
+                $notes .= $field['label'] . ': ' . $entry[$field['id']] . "\r\n";
+            }
         }
-    }
 
-    // Fetch project custom fields
-    $custom_fields = array();
-    foreach( $asanawp_custom_fields as $field_id => $custom_field ) {
-        if ( $custom_field['value'] == 'true' ) {
-            $custom_fields[ $custom_field['gid'] ] = $entry[ $field_id ];
+        // Fetch project custom fields
+        $custom_fields = array();
+        foreach( $asanawp_custom_fields as $field_id => $custom_field ) {
+            if ( $custom_field['value'] == 'true' ) {
+                $custom_fields[ $custom_field['gid'] ] = $entry[ $field_id ];
+            }
         }
+
+        $newTaskOptions = array(
+            'name'          => $name,
+            'projects'      => array( $asanawp_project ),
+            'memberships'   => array(
+                array(
+                    'project'   => $asanawp_project,
+                    'section'   => $asanawp_section
+                )
+            ),
+            'notes'         => $notes,
+            'custom_fields' => $custom_fields,
+        );
+        $newTask = $client->tasks->createTask( $newTaskOptions );
     }
-
-    $newTaskOptions = array(
-        'name'          => $name,
-        'projects'      => array( $asanawp_project ),
-        'memberships'   => array(
-            array(
-                'project'   => $asanawp_project,
-                'section'   => $asanawp_section
-            )
-        ),
-        'notes'         => $notes,
-        'custom_fields' => $custom_fields,
-    );
-    $newTask = $client->tasks->createTask( $newTaskOptions );
-
     // }
 
     return $notification;
