@@ -160,6 +160,24 @@ function asanawp_register_setting(){
         'sanitize_callback' // sanitization function
     );
 
+    register_setting(
+        'asanawp_settings', // settings group name
+        'asanawp_assignee', // option name
+        'sanitize_text_field' // sanitization function
+    );
+
+    add_settings_field(
+        'asanawp_assignee',
+        'Assignee',
+        'asanawp_assignee', // function which prints the field
+        'asanawp', // page slug
+        'some_settings_section_id', // section ID
+        array( 
+            'label_for' => 'asanawp_assignee',
+            'class' => 'asanawp', // for <tr> element
+        )
+    );
+
     add_settings_field(
         'asanawp_custom_title',
         'Custom Title',
@@ -331,6 +349,22 @@ function asanawp_custom_title(){
 
 }
 
+function asanawp_assignee() {
+
+    global $client;
+
+    $asanawp_workspace = get_option( 'asanawp_workspace' );
+    $asanawp_assignee = get_option( 'asanawp_assignee' );
+    $assignees = $client->users->getUsers( $asanawp_workspace );
+
+    echo '<select id="asanawp_assignee" name="asanawp_assignee">';
+    foreach ($assignees as $assignee) {
+        echo '<option value="' . $assignee->gid . '" ' . ( $asanawp_assignee == $assignee->gid ? 'selected' : '' ) . '>' . $assignee->name . '</option>';
+    }
+    echo '</select>';
+
+}
+
 function asanawp_custom_fields() {
 
     global $client;
@@ -385,13 +419,14 @@ function asanawp_nofitication(  $notification, $form, $entry ) {
         $asanawp_project        = get_option( 'asanawp_project' );
         $asanawp_section        = get_option( 'asanawp_section' );
         $asanawp_custom_fields  = get_option( 'asanawp_custom_fields' );
-        $name                   = get_option( 'asanawp_custom_title' );
+        $asanawp_custom_title                   = get_option( 'asanawp_custom_title' );
+        $asanawp_assignee       = get_option( 'asanawp_assignee' );
 
         // Interpolate custom title with entry fields
-        preg_match_all( '/{[^{]*?:(\d+(\.\d+)?)(:(.*?))?}/mi', $name, $matches, PREG_SET_ORDER );
+        preg_match_all( '/{[^{]*?:(\d+(\.\d+)?)(:(.*?))?}/mi', $asanawp_custom_title, $matches, PREG_SET_ORDER );
         if ( is_array( $matches ) ) {
             foreach ( $matches as $match ) {
-                $name = str_replace( $match[0], $entry[ $match[1] ], $name );
+                $asanawp_custom_title = str_replace( $match[0], $entry[ $match[1] ], $asanawp_custom_title );
             }
         }
 
@@ -411,7 +446,8 @@ function asanawp_nofitication(  $notification, $form, $entry ) {
         }
 
         $newTaskOptions = array(
-            'name'          => $name,
+            'name'          => $asanawp_custom_title,
+            'assignee'      => $asanawp_assignee,
             'projects'      => array( $asanawp_project ),
             'memberships'   => array(
                 array(
