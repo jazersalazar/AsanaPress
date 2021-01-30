@@ -156,6 +156,24 @@ function asanawp_register_setting(){
 
     register_setting(
         'asanawp_settings', // settings group name
+        'asanawp_custom_title', // option name
+        'sanitize_callback' // sanitization function
+    );
+
+    add_settings_field(
+        'asanawp_custom_title',
+        'Custom Title',
+        'asanawp_custom_title', // function which prints the field
+        'asanawp', // page slug
+        'some_settings_section_id', // section ID
+        array( 
+            'label_for' => 'asanawp_custom_title',
+            'class' => 'asanawp', // for <tr> element
+        )
+    );
+
+    register_setting(
+        'asanawp_settings', // settings group name
         'asanawp_custom_fields', // option name
         'sanitize_callback' // sanitization function
     );
@@ -302,6 +320,17 @@ function asanawp_form() {
 
 }
 
+function asanawp_custom_title(){
+
+    $asanawp_custom_title = get_option( 'asanawp_custom_title' );
+
+    printf(
+        '<input type="text" id="asanawp_custom_title" name="asanawp_custom_title" value="%s" />',
+        esc_attr( $asanawp_custom_title )
+    );
+
+}
+
 function asanawp_custom_fields() {
 
     global $client;
@@ -352,13 +381,13 @@ function asanawp_nofitication(  $notification, $form, $entry ) {
     $client = Asana\Client::accessToken( $asanawp_pat );
 
     if ( $client ) {
-        $asanawp_workspace = get_option( 'asanawp_workspace' );
-        $asanawp_project = get_option( 'asanawp_project' );
-        $asanawp_section = get_option( 'asanawp_section' );
-        $asanawp_custom_fields = get_option( 'asanawp_custom_fields' );
+        $asanawp_workspace      = get_option( 'asanawp_workspace' );
+        $asanawp_project        = get_option( 'asanawp_project' );
+        $asanawp_section        = get_option( 'asanawp_section' );
+        $asanawp_custom_fields  = get_option( 'asanawp_custom_fields' );
+        $name                   = get_option( 'asanawp_custom_title' );
 
-        // Interpolate subject with entry fields
-        $name = $notification['subject'];
+        // Interpolate custom title with entry fields
         preg_match_all( '/{[^{]*?:(\d+(\.\d+)?)(:(.*?))?}/mi', $name, $matches, PREG_SET_ORDER );
         if ( is_array( $matches ) ) {
             foreach ( $matches as $match ) {
