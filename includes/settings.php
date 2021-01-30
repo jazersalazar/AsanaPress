@@ -153,11 +153,23 @@ function asanawp_register_setting(){
     if ( !$asanawp_form ) {
         return;
     }
-
+    
     register_setting(
         'asanawp_settings', // settings group name
         'asanawp_custom_title', // option name
         'sanitize_callback' // sanitization function
+    );
+
+    add_settings_field(
+        'asanawp_custom_title',
+        'Custom Title',
+        'asanawp_custom_title', // function which prints the field
+        'asanawp', // page slug
+        'some_settings_section_id', // section ID
+        array( 
+            'label_for' => 'asanawp_custom_title',
+            'class' => 'asanawp', // for <tr> element
+        )
     );
 
     register_setting(
@@ -178,14 +190,20 @@ function asanawp_register_setting(){
         )
     );
 
+    register_setting(
+        'asanawp_settings', // settings group name
+        'asanawp_due_on', // option name
+        'sanitize_callback' // sanitization function
+    );
+
     add_settings_field(
-        'asanawp_custom_title',
-        'Custom Title',
-        'asanawp_custom_title', // function which prints the field
+        'asanawp_due_on',
+        'Due On',
+        'asanawp_due_on', // function which prints the field
         'asanawp', // page slug
         'some_settings_section_id', // section ID
         array( 
-            'label_for' => 'asanawp_custom_title',
+            'label_for' => 'asanawp_due_on',
             'class' => 'asanawp', // for <tr> element
         )
     );
@@ -365,24 +383,34 @@ function asanawp_assignee() {
 
 }
 
+function asanawp_due_on() {
+
+    global $client;
+
+    $asanawp_due_on = get_option( 'asanawp_due_on' );
+
+    $form = get_asana_form();
+
+    echo '<select name="asanawp_due_on">';
+    echo '<option value="">N/A</option>';
+    foreach ( $form as $field_id => $field_label ) {
+        echo '<option value="' . $field_id . '" ' . ( $asanawp_due_on == $field_id ? 'selected' : '' ) . '>' . $field_label . '</option>';
+    }
+    echo '</select>';
+
+}
+
+
 function asanawp_custom_fields() {
 
     global $client;
 
-    $asanawp_form = get_option( 'asanawp_form' );
     $asanawp_custom_fields = get_option( 'asanawp_custom_fields' );
     
-    $form = GFAPI::get_form( $asanawp_form );
-
-    $field_list = array();
-    foreach ( $form['fields'] as $field ) {
-        if ( $field['label'] ) {
-            $field_list[$field['id']] = $field['label'];
-        }
-    }
+    $form = get_asana_form();
 
     echo '<table id="asanawp_custom_fields">';
-    foreach ( $field_list as $field_id => $field_label ) {
+    foreach ( $form as $field_id => $field_label ) {
         echo '<tr>';
         echo '<td>' . $field_label . '</td>'; 
         echo '<td><input type="hidden" name="asanawp_custom_fields[' . $field_id . '][label]" value="' . $field_label . '"></td>'; 
@@ -419,8 +447,9 @@ function asanawp_nofitication(  $notification, $form, $entry ) {
         $asanawp_project        = get_option( 'asanawp_project' );
         $asanawp_section        = get_option( 'asanawp_section' );
         $asanawp_custom_fields  = get_option( 'asanawp_custom_fields' );
-        $asanawp_custom_title                   = get_option( 'asanawp_custom_title' );
+        $asanawp_custom_title   = get_option( 'asanawp_custom_title' );
         $asanawp_assignee       = get_option( 'asanawp_assignee' );
+        $asanawp_due_on         = get_option( 'asanawp_due_on' );
 
         // Interpolate custom title with entry fields
         preg_match_all( '/{[^{]*?:(\d+(\.\d+)?)(:(.*?))?}/mi', $asanawp_custom_title, $matches, PREG_SET_ORDER );
@@ -430,10 +459,13 @@ function asanawp_nofitication(  $notification, $form, $entry ) {
             }
         }
 
-        $notes = 'This task is automatically created via form submission, full details below:\r\n';
+        // Set actual due on date
+        $asanawp_due_on = $entry[ $asanawp_due_on ];
+
+        $notes = "<i>This task is automatically created via form submission, full details below</i>:\r\n\r\n";
         foreach ( $form['fields'] as $field ) {
             if ( $field['label'] && $asanawp_custom_fields[$field['id']]['value'] == 'false') {
-                $notes .= $field['label'] . ': ' . $entry[$field['id']] . "\r\n";
+                $notes .= "<strong>" . $field['label'] . "</strong>:\r\n " . $entry[$field['id']] . "\r\n\r\n";
             }
         }
 
@@ -448,6 +480,7 @@ function asanawp_nofitication(  $notification, $form, $entry ) {
         $newTaskOptions = array(
             'name'          => $asanawp_custom_title,
             'assignee'      => $asanawp_assignee,
+            'due_on'        => $asanawp_due_on,
             'projects'      => array( $asanawp_project ),
             'memberships'   => array(
                 array(
@@ -455,7 +488,7 @@ function asanawp_nofitication(  $notification, $form, $entry ) {
                     'section'   => $asanawp_section
                 )
             ),
-            'notes'         => $notes,
+            'html_notes'    => '<body>' . $notes . '</body>',
             'custom_fields' => $custom_fields,
         );
         $newTask = $client->tasks->createTask( $newTaskOptions );
@@ -464,4 +497,20 @@ function asanawp_nofitication(  $notification, $form, $entry ) {
 
     return $notification;
 
+}
+
+function get_asana_form() {
+
+    $asanawp_form = get_option( 'asanawp_form' );
+    
+    $gform = GFAPI::get_form( $asanawp_form );
+
+    $form = array();
+    foreach ( $gform['fields'] as $field ) {
+        if ( $field['label'] ) {
+            $form[$field['id']] = $field['label'];
+        }
+    }
+
+    return $form;
 }
