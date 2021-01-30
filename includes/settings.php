@@ -233,40 +233,34 @@ function asana_workspace_custom_fields() {
 
     global $client;
 
-    $asanawp_workspace = get_option( 'asanawp_workspace' );
     $asanawp_project = get_option( 'asanawp_project' );
     $asanawp_custom_fields = get_option( 'asanawp_custom_fields' );
 
-    if ( !$asanawp_workspace || !$asanawp_project || !$asanawp_custom_fields ) return false;
-    $custom_fields = $client->custom_fields->getCustomFieldsForWorkspace( $asanawp_workspace );
-
-    $workspace_fields = array();
-    foreach ($custom_fields as $custom_field) {
-        $workspace_fields[$custom_field->name] = $custom_field->gid;
+    $projectfields = $client->custom_field_settings->findByProject( $asanawp_project );
+    $project_fields = array();
+    foreach ($projectfields as $projectfield) {
+        $field = $projectfield->custom_field;
+        $project_fields[$field->name] = $field->gid;
     }
 
     $custom_fields = array();
     foreach( $asanawp_custom_fields as $field_id => $custom_field ) {
         if ( $custom_field['value'] == 'true' ) {
-            if ( !isset($workspace_fields[ $custom_field['label'] ]) ) {
+            if ( !isset($project_fields[ $custom_field['label'] ]) ) {
                 $customFieldOptions = array(
-                    'name'              => $custom_field['label'],
-                    'resource_subtype'  => 'text',
-                    'workspace'         => $asanawp_workspace
+                    'name'                   => $custom_field['label'],
+                    'resource_subtype'       => 'text'
                 );
-                // Create custom field if it's set to "Yes"
-                $response = $client->custom_fields->createCustomField( $customFieldOptions );
-                $gid = $response->gid;
 
-                // Add custom field to the project
-                $client->projects->addCustomFieldSettingForProject(
+                // Create custom field directly to the project if it's set to "Yes"
+                $gid = $client->projects->addCustomFieldSettingForProject(
                     $asanawp_project,
                     array(
-                        'custom_field' => $gid
+                        'custom_field' => $customFieldOptions
                     )
-                );
+                )->gid;
             } else {
-                $gid = $workspace_fields[ $custom_field['label'] ];
+                $gid = $project_fields[ $custom_field['label'] ];
             }
             $asanawp_custom_fields[ $field_id ]['gid'] = $gid;
         } else {
@@ -278,7 +272,6 @@ function asana_workspace_custom_fields() {
             }
         }
     }
-
     update_option( 'asanawp_custom_fields', $asanawp_custom_fields );
 
 }
@@ -406,7 +399,7 @@ function asanawp_custom_fields() {
     global $client;
 
     $asanawp_custom_fields = get_option( 'asanawp_custom_fields' );
-    
+
     $form = get_asana_form();
 
     echo '<table id="asanawp_custom_fields">';
