@@ -210,6 +210,24 @@ function asanawp_register_setting(){
 
     register_setting(
         'asanawp_settings', // settings group name
+        'asanawp_project_fields', // option name
+        'sanitize_callback' // sanitization function
+    );
+
+    add_settings_field(
+        'asanawp_project_fields',
+        'Project Fields',
+        'asanawp_project_fields', // function which prints the field
+        'asanawp', // page slug
+        'some_settings_section_id', // section ID
+        array( 
+            'label_for' => 'asanawp_project_fields',
+            'class' => 'asanawp', // for <tr> element
+        )
+    );
+
+    register_setting(
+        'asanawp_settings', // settings group name
         'asanawp_custom_fields', // option name
         'sanitize_callback' // sanitization function
     );
@@ -240,7 +258,7 @@ function asana_workspace_custom_fields() {
     $project_fields = array();
     foreach ($projectfields as $projectfield) {
         $field = $projectfield->custom_field;
-        $project_fields[$field->name] = $field->gid;
+        $project_fields[ $field->name ] = $field->gid;
     }
 
     $custom_fields = array();
@@ -393,6 +411,70 @@ function asanawp_due_on() {
 
 }
 
+function asanawp_project_fields() {
+
+    global $client;
+
+    $asanawp_project = get_option( 'asanawp_project' );
+    $asanawp_project_fields = get_option( 'asanawp_project_fields' );
+    $asanawp_custom_fields = get_option( 'asanawp_custom_fields' );
+    
+    $projectfields = $client->custom_field_settings->findByProject( $asanawp_project );
+
+    // Prepare generated custom fields to exclude on project fields
+    $custom_fields  = array();
+    foreach ( $asanawp_custom_fields as $custom_field ) {
+        if ( $custom_field['gid'] ) {
+            $custom_fields[] = $custom_field['gid'];
+        }
+    }
+
+    $form = get_asana_form();
+
+    echo '<table id="asanawp_project_fields">';
+    foreach ( $projectfields as $projectfield ) {
+        $field = $projectfield->custom_field;
+        // Display projects fields if it's not create via custom fields
+        if ( !in_array( $field->gid, $custom_fields ) ) {
+            echo '<tr>';
+            echo '<td><strong>' . $field->name . '</strong></td>'; 
+            echo '<td>';
+            echo '<select name="asanawp_project_fields[' . $field->gid . '][field_id]">';
+            echo '<option value="">N/A</option>';
+            foreach ( $form as $field_id => $field_label ) {
+                $field_selected = $asanawp_project_fields[ $field->gid ]['field_id'] == $field_id ? 'selected' : '';
+                echo '<option value="' . $field_id . '" ' . $field_selected . '>' . $field_label . '</option>';
+            }
+            echo '</select>';
+            
+            // Just initialize default if field not enum type
+            if ($field->type != 'enum' ) {
+                echo '<td><input type="hidden" name="asanawp_project_fields[' .  $field->gid . '][default]" value=""></td>'; 
+            }
+            
+            echo '</td>';
+            echo '</tr>';
+
+            if ($field->type == 'enum' ) {
+                echo '<tr>';
+                echo '<td>Default Value</td>'; 
+                echo '<td>';
+                echo '<select name="asanawp_project_fields[' . $field->gid . '][default]">';
+                echo '<option value="">N/A</option>';
+                foreach ( $field->enum_options as $option ) {
+                    $option_selected = $asanawp_project_fields[ $field->gid ]['default'] == $option->gid ? 'selected' : '';
+                    echo '<option value="' . $option->gid . '" ' . $option_selected . '>' .  $option->name . '</option>';
+                }
+                echo '</select>';
+                echo '</td>';
+                echo '</tr>';
+            }
+        }
+
+    }
+    echo '</table>';
+
+}
 
 function asanawp_custom_fields() {
 
@@ -407,11 +489,11 @@ function asanawp_custom_fields() {
         echo '<tr>';
         echo '<td>' . $field_label . '</td>'; 
         echo '<td><input type="hidden" name="asanawp_custom_fields[' . $field_id . '][label]" value="' . $field_label . '"></td>'; 
-        echo '<td><input type="hidden" name="asanawp_custom_fields[' . $field_id . '][gid]" value ="' . $asanawp_custom_fields[$field_id]['gid'] . '" ></td>'; 
+        echo '<td><input type="hidden" name="asanawp_custom_fields[' . $field_id . '][gid]" value ="' . $asanawp_custom_fields[ $field_id ]['gid'] . '" ></td>'; 
         echo '<td>';
         echo '<select name="asanawp_custom_fields[' . $field_id . '][value]">';
-        echo '<option value="false" ' . ( $asanawp_custom_fields[$field_id]['value'] == 'false' ? 'selected' : '' ) . '>No</option>';
-        echo '<option value="true" ' . ( $asanawp_custom_fields[$field_id]['value'] == 'true' ? 'selected' : '' ) . '>Yes</option>';
+        echo '<option value="false" ' . ( $asanawp_custom_fields[ $field_id ]['value'] == 'false' ? 'selected' : '' ) . '>No</option>';
+        echo '<option value="true" ' . ( $asanawp_custom_fields[ $field_id ]['value'] == 'true' ? 'selected' : '' ) . '>Yes</option>';
         echo '</select>';
         echo '</td>';
         echo '</tr>';
@@ -439,6 +521,7 @@ function asanawp_nofitication(  $notification, $form, $entry ) {
         $asanawp_workspace      = get_option( 'asanawp_workspace' );
         $asanawp_project        = get_option( 'asanawp_project' );
         $asanawp_section        = get_option( 'asanawp_section' );
+        $asanawp_project_fields = get_option( 'asanawp_project_fields' );
         $asanawp_custom_fields  = get_option( 'asanawp_custom_fields' );
         $asanawp_custom_title   = get_option( 'asanawp_custom_title' );
         $asanawp_assignee       = get_option( 'asanawp_assignee' );
@@ -457,13 +540,23 @@ function asanawp_nofitication(  $notification, $form, $entry ) {
 
         $notes = "<i>This task is automatically created via form submission, full details below</i>:\r\n\r\n";
         foreach ( $form['fields'] as $field ) {
-            if ( $field['label'] && $asanawp_custom_fields[$field['id']]['value'] == 'false') {
-                $notes .= "<strong>" . $field['label'] . "</strong>:\r\n " . $entry[$field['id']] . "\r\n\r\n";
+            if ( $field['label'] && $asanawp_custom_fields[ $field['id'] ]['value'] == 'false') {
+                $notes .= "<strong>" . $field['label'] . "</strong>:\r\n " . $entry[ $field['id'] ] . "\r\n\r\n";
             }
         }
 
-        // Fetch project custom fields
+        // Set project custom fields
         $custom_fields = array();
+
+        // Set project fields to custom fields
+        foreach( $asanawp_project_fields as $gid => $project_field ) {
+            $custom_fields[ $gid ] = $project_field['default'];
+            if ( $project_field['field_id'] ) {
+                $custom_fields[ $gid ] = $entry[ $project_field['field_id'] ];
+            }
+        }
+
+        // Set generated fields to custom fields
         foreach( $asanawp_custom_fields as $field_id => $custom_field ) {
             if ( $custom_field['value'] == 'true' ) {
                 $custom_fields[ $custom_field['gid'] ] = $entry[ $field_id ];
@@ -501,7 +594,7 @@ function get_asana_form() {
     $form = array();
     foreach ( $gform['fields'] as $field ) {
         if ( $field['label'] ) {
-            $form[$field['id']] = $field['label'];
+            $form[ $field['id'] ] = $field['label'];
         }
     }
 
