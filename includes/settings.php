@@ -587,7 +587,19 @@ function asanawp_nofitication(  $notification, $form, $entry ) {
         $notes = "<i>This task is automatically created via form submission, full details below</i>:\r\n\r\n";
         foreach ( $form['fields'] as $field ) {
             if ( $field['label'] && $asanawp_custom_fields[ $field['id'] ]['value'] == 'false') {
-                $notes .= "<strong>" . $field['label'] . "</strong>:\r\n " . $entry[ $field['id'] ] . "\r\n\r\n";
+                $infos = @unserialize( $entry[ $field['id'] ] );
+                if ( is_array( $infos )) {
+                    $description = '';
+                    foreach ($infos as $index => $info) {
+                        if ( $index > 0 ) $description .= "\r\n";
+                        $description .= ($index + 1) . '. ' . $info;
+                    }
+
+                    $infos = $description;
+                } else {
+                    $infos = $entry[ $field['id'] ];
+                }
+                $notes .= "<strong>" . $field['label'] . "</strong>:\r\n" . $infos . "\r\n\r\n";
             }
         }
 
