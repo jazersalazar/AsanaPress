@@ -636,7 +636,9 @@ function asanawp_nofitication(  $notification, $form, $entry ) {
         );
         $newTask = $client->tasks->createTask( $newTaskOptions );
 
-        foreach ($asanawp_subtasks as $subtask) {
+        // Reverse subtasks order so it will create the last item first
+        $subtasks = array_reverse( $asanawp_subtasks );
+        foreach ($subtasks as $subtask) {
             $newSubtaskOptions = array (
                 'name'          => $subtask,
                 'assignee'      => $asanawp_assignee,
