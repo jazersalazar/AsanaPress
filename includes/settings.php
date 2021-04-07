@@ -244,6 +244,24 @@ function asanawp_register_setting(){
         )
     );
 
+    register_setting(
+        'asanawp_settings', // settings group name
+        'asanawp_subtasks', // option name
+        'sanitize_callback' // sanitization function
+    );
+
+    add_settings_field(
+        'asanawp_subtasks',
+        'Subtasks',
+        'asanawp_subtasks', // function which prints the field
+        'asanawp', // page slug
+        'some_settings_section_id', // section ID
+        array( 
+            'label_for' => 'asanawp_subtasks',
+            'class' => 'asanawp', // for <tr> element
+        )
+    );
+
 }
 
 add_action('update_option_asanawp_custom_fields', 'asana_workspace_custom_fields', 10, 3);
@@ -478,8 +496,6 @@ function asanawp_project_fields() {
 
 function asanawp_custom_fields() {
 
-    global $client;
-
     $asanawp_custom_fields = get_option( 'asanawp_custom_fields' );
 
     $form = get_asana_form();
@@ -502,6 +518,36 @@ function asanawp_custom_fields() {
 
 }
 
+function asanawp_subtasks() {
+
+    $asanawp_subtasks = get_option( 'asanawp_subtasks' );
+
+    echo '<table id="asanawp_subtasks">';
+    echo '<thead>';
+    echo '<th>Subtask</th>';
+    echo '<th>Action</th>';
+    echo '</thead>';
+    echo '<tbody>';
+
+    if ( $asanawp_subtasks ) {
+        foreach ( $asanawp_subtasks as $subtask ) {
+            echo '<tr>';
+            echo '<td><input name="asanawp_subtasks[]" value="' . $subtask . '"></td>';
+            echo '<td><a href="javascript:void(0);" class="subtask-remove">Remove</a></td>';
+            echo '</tr>';
+        }
+    }
+
+    echo '</tbody>';
+    echo '<tfoot>';
+    echo '<tr>';
+    echo '<td colspan="2"><a href="javacript:void(0);" class="subtask-add">Add Subtask</a></td>';
+    echo '</tr>';
+    echo '</tfoot>';
+    echo '</table>';
+
+}
+
 $gform = get_option( 'asanawp_form' );
 if ( $gform ) {
     add_filter( 'gform_notification_' . $gform, 'asanawp_nofitication', 10, 3 );
@@ -511,7 +557,6 @@ function asanawp_nofitication(  $notification, $form, $entry ) {
 
     // TODO Add select notification if needed
     // if ( $notification['name'] == 'Admin Notification' ) {
-
     global $client;
     
     $asanawp_pat = get_option( 'asanawp_pat' );
@@ -526,6 +571,7 @@ function asanawp_nofitication(  $notification, $form, $entry ) {
         $asanawp_custom_title   = get_option( 'asanawp_custom_title' );
         $asanawp_assignee       = get_option( 'asanawp_assignee' );
         $asanawp_due_on         = get_option( 'asanawp_due_on' );
+        $asanawp_subtasks       = get_option( 'asanawp_subtasks' );
 
         // Interpolate custom title with entry fields
         preg_match_all( '/{[^{]*?:(\d+(\.\d+)?)(:(.*?))?}/mi', $asanawp_custom_title, $matches, PREG_SET_ORDER );
@@ -578,6 +624,15 @@ function asanawp_nofitication(  $notification, $form, $entry ) {
             'custom_fields' => $custom_fields,
         );
         $newTask = $client->tasks->createTask( $newTaskOptions );
+
+        foreach ($asanawp_subtasks as $subtask) {
+            $newSubtaskOptions = array (
+                'name'          => $subtask,
+                'assignee'      => $asanawp_assignee,
+                'due_on'        => $asanawp_due_on,
+            );
+            $newSubtask = $client->tasks->createSubtaskForTask( $newTask->gid, $newSubtaskOptions );
+        }
     }
     // }
 

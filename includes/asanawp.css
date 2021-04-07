@@ -1,0 +1,13 @@
+#asanawp_subtasks {
+    width: 100%;
+}
+
+#asanawp_subtasks th,
+#asanawp_subtasks td {
+    border: 1px solid #ddd;
+    text-align: center;
+}
+
+#asanawp_subtasks input {
+    width: 100%;
+}
