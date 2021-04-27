@@ -614,7 +614,7 @@ function asanawp_nofitication(  $notification, $form, $entry ) {
             if ( $project_field['default'] ||  $project_field['field_id'] ) {
                 $custom_fields[ $gid ] = $project_field['field_id'] ? $entry[ $project_field['field_id'] ] : $project_field['default'];
                 if ( $project_field['type'] == 'enum' && $project_field['field_id'] ) {
-                    $custom_fields[ $gid ] = "'" . $custom_fields[ $gid ] . "'";
+                    $custom_fields[ $gid ] = "{$custom_fields[ $gid ]}";
                 }
             }
         }
@@ -622,7 +622,7 @@ function asanawp_nofitication(  $notification, $form, $entry ) {
         // Set generated fields to custom fields
         foreach( $asanawp_custom_fields as $field_id => $custom_field ) {
             if ( $custom_field['value'] == 'true' && $entry[ $field_id ] ) {
-                $custom_fields[ $custom_field['gid'] ] = "'" . $entry[ $field_id ] . "'";
+                $custom_fields[ $custom_field['gid'] ] = "{$entry[ $field_id ]}";
             }
         }
 
