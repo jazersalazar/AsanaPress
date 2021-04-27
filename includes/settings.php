@@ -467,7 +467,10 @@ function asanawp_project_fields() {
             
             // Just initialize default if field not enum type
             if ($field->type != 'enum' ) {
-                echo '<td><input type="hidden" name="asanawp_project_fields[' .  $field->gid . '][default]" value=""></td>'; 
+                echo '<input type="hidden" name="asanawp_project_fields[' .  $field->gid . '][default]" value="">'; 
+                echo '<input type="hidden" name="asanawp_project_fields[' .  $field->gid . '][type]" value="number">'; 
+            } else {
+                echo '<input type="hidden" name="asanawp_project_fields[' .  $field->gid . '][type]" value="enum">'; 
             }
             
             echo '</td>';
@@ -609,7 +612,10 @@ function asanawp_nofitication(  $notification, $form, $entry ) {
         // Set project fields to custom fields
         foreach( $asanawp_project_fields as $gid => $project_field ) {
             if ( $project_field['default'] ||  $project_field['field_id'] ) {
-                $custom_fields[ $gid ] = "'" . ($project_field['field_id'] ? $entry[ $project_field['field_id'] ] : $project_field['default']) . "'";
+                $custom_fields[ $gid ] = $project_field['field_id'] ? $entry[ $project_field['field_id'] ] : $project_field['default'];
+                if ( $project_field['type'] == 'enum' ) {
+                    $custom_fields[ $gid ] = "'" . $custom_fields[ $gid ] . "'";
+                }
             }
         }
 
