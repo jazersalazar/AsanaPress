@@ -609,7 +609,7 @@ function asanawp_nofitication(  $notification, $form, $entry ) {
         // Set project fields to custom fields
         foreach( $asanawp_project_fields as $gid => $project_field ) {
             if ( $project_field['default'] ||  $project_field['field_id'] ) {
-                $custom_fields[ $gid ] = $project_field['field_id'] ? $entry[ $project_field['field_id'] ] : $project_field['default'];
+                $custom_fields[ $gid ] = "'" . ($project_field['field_id'] ? $entry[ $project_field['field_id'] ] : $project_field['default']) . "'";
             }
         }
 
