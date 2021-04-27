@@ -613,7 +613,7 @@ function asanawp_nofitication(  $notification, $form, $entry ) {
         foreach( $asanawp_project_fields as $gid => $project_field ) {
             if ( $project_field['default'] ||  $project_field['field_id'] ) {
                 $custom_fields[ $gid ] = $project_field['field_id'] ? $entry[ $project_field['field_id'] ] : $project_field['default'];
-                if ( $project_field['type'] == 'enum' ) {
+                if ( $project_field['type'] == 'enum' && $project_field['field_id'] ) {
                     $custom_fields[ $gid ] = "'" . $custom_fields[ $gid ] . "'";
                 }
             }
