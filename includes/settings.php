@@ -563,7 +563,7 @@ function asanawp_nofitication(  $notification, $form, $entry ) {
     global $client;
     
     $asanawp_pat = get_option( 'asanawp_pat' );
-    $client = Asana\Client::accessToken( $asanawp_pat );
+    $client = Asana\Client::accessToken( $asanawp_pat, array( 'log_asana_change_warnings' => false ) );
 
     if ( $client ) {
         $asanawp_workspace      = get_option( 'asanawp_workspace' );
