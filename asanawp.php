@@ -5,7 +5,7 @@
  * Description: Integrates asana functionalities inside wordpress dashboard.
  * Author: Jazer Salazar
  * Author URI: https://jazersalazar.com/
- * Version: 0.1
+ * Version: 0.2
  */
 
 require 'vendor/autoload.php';
