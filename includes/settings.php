@@ -553,15 +553,22 @@ function asanawp_subtasks() {
 
 $gform = get_option( 'asanawp_form' );
 if ( $gform ) {
-    add_filter( 'gform_notification_' . $gform, 'asanawp_nofitication', 10, 3 );
+    // add_filter( 'gform_notification_' . $gform, 'asanawp_nofitication', 10, 3 );
+    add_filter( 'gform_after_submission_' . $gform, 'asanawp_nofitication', 10, 3 );
 }
 
-function asanawp_nofitication(  $notification, $form, $entry ) {
+function asanawp_nofitication( $entry, $form ) {
 
-    // TODO Add select notification if needed
-    // if ( $notification['name'] == 'Admin Notification' ) {
+    wp_schedule_single_event( time(), 'asana_task_creation', array( $entry, $form ) );
+
+}
+
+add_action( 'asana_task_creation', 'create_asana_task', 10, 2 );
+
+function create_asana_task( $entry, $form ) {
+
     global $client;
-    
+
     $asanawp_pat = get_option( 'asanawp_pat' );
     $client = Asana\Client::accessToken( $asanawp_pat, array( 'log_asana_change_warnings' => false ) );
 
@@ -653,9 +660,6 @@ function asanawp_nofitication(  $notification, $form, $entry ) {
             $newSubtask = $client->tasks->createSubtaskForTask( $newTask->gid, $newSubtaskOptions );
         }
     }
-    // }
-
-    return $notification;
 
 }
 
