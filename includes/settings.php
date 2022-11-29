@@ -274,7 +274,7 @@ function asana_workspace_custom_fields() {
 
     $projectfields = $client->custom_field_settings->findByProject( $asanawp_project );
     $project_fields = array();
-    foreach ($projectfields as $projectfield) {
+    foreach ( $projectfields as $projectfield ) {
         $field = $projectfield->custom_field;
         $project_fields[ $field->name ] = $field->gid;
     }
@@ -553,14 +553,11 @@ function asanawp_subtasks() {
 
 $gform = get_option( 'asanawp_form' );
 if ( $gform ) {
-    // add_filter( 'gform_notification_' . $gform, 'asanawp_nofitication', 10, 3 );
     add_filter( 'gform_after_submission_' . $gform, 'asanawp_nofitication', 10, 3 );
 }
 
 function asanawp_nofitication( $entry, $form ) {
-
-    wp_schedule_single_event( time(), 'asana_task_creation', array( $entry, $form ) );
-
+	wp_schedule_single_event( time(), 'asana_task_creation', array( $entry, $form ) );
 }
 
 add_action( 'asana_task_creation', 'create_asana_task', 10, 2 );
@@ -582,6 +579,14 @@ function create_asana_task( $entry, $form ) {
         $asanawp_assignee       = get_option( 'asanawp_assignee' );
         $asanawp_due_on         = get_option( 'asanawp_due_on' );
         $asanawp_subtasks       = get_option( 'asanawp_subtasks' );
+
+        // Create a reference table for field type
+        $projectfields = $client->custom_field_settings->findByProject( $asanawp_project );
+        $project_fields_type = array();
+        foreach ( $projectfields as $projectfield ) {
+            $field = $projectfield->custom_field;
+            $project_fields_type[ $field->gid ] = $field->type;
+        }
 
         // Interpolate custom title with entry fields
         preg_match_all( '/{[^{]*?:(\d+(\.\d+)?)(:(.*?))?}/mi', $asanawp_custom_title, $matches, PREG_SET_ORDER );
@@ -620,9 +625,17 @@ function create_asana_task( $entry, $form ) {
         foreach( $asanawp_project_fields as $gid => $project_field ) {
             if ( $project_field['default'] ||  $project_field['field_id'] ) {
                 $custom_fields[ $gid ] = $project_field['field_id'] ? $entry[ $project_field['field_id'] ] : $project_field['default'];
+
                 if ( $project_field['type'] == 'enum' && $project_field['field_id'] ) {
                     $custom_fields[ $gid ] = "{$custom_fields[ $gid ]}";
                 }
+
+                // Support custom date field
+				if ( $project_fields_type[ $gid ] == 'date' ) {
+					$custom_fields[ $gid ] = [
+						"date" => $custom_fields[ $gid ]
+					];
+				}
             }
         }
 
