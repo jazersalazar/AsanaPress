@@ -667,7 +667,6 @@ function create_asana_task( $entry, $form ) {
         foreach ($subtasks as $subtask) {
             $newSubtaskOptions = array (
                 'name'          => $subtask,
-                'assignee'      => $asanawp_assignee,
                 'due_on'        => $asanawp_due_on,
             );
             $newSubtask = $client->tasks->createSubtaskForTask( $newTask->gid, $newSubtaskOptions );
